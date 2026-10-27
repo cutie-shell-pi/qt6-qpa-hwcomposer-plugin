@@ -4,7 +4,32 @@ project(hwcomposer VERSION 1.0 LANGUAGES C CXX)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui WaylandCompositor OpenGL DBus)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui WaylandCompositor OpenGL DBus Qml)
+
+# Macro to strip non-existent include directories from imported targets
+macro(fix_imported_target_includes target_name)
+    if(TARGET ${target_name})
+        get_target_property(inc_dirs ${target_name} INTERFACE_INCLUDE_DIRECTORIES)
+        if(inc_dirs)
+            set(valid_dirs "")
+            foreach(dir ${inc_dirs})
+                if(EXISTS "${dir}")
+                    list(APPEND valid_dirs "${dir}")
+                else()
+                    message(STATUS "Removing non-existent include dir from ${target_name}: ${dir}")
+                endif()
+            endforeach()
+            set_target_properties(${target_name} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${valid_dirs}")
+        endif()
+    endif()
+endmacro()
+
+# Apply the fix to private Qt targets prone to packaging path mismatches
+fix_imported_target_includes(Qt6::WaylandCompositorPrivate)
+fix_imported_target_includes(Qt6::GuiPrivate)
+fix_imported_target_includes(Qt6::CorePrivate)
+fix_imported_target_includes(Qt6::QmlPrivate)
+
 find_package(PkgConfig)
 pkg_check_modules(EGL REQUIRED egl)
 pkg_check_modules(HWC_libhardware REQUIRED libhardware)
